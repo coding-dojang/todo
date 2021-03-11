@@ -1,7 +1,8 @@
 import os
 import unittest
 
-from main import (add_task, list_task, get_last_index, make_it_done, save_task)
+from main import (add_task, list_task, get_last_index, make_it_done,
+                  save_task, Task, TaskStatus)
 
 class TaskTest(unittest.TestCase):
     def setUp(self):
@@ -20,7 +21,11 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(expected_results, test_file.readlines())
 
     def test_list_task(self):
-        expected_tasks = ['0,todo,task one', '1,todo,task two', '2,todo,task three']
+        expected_tasks = [
+            Task(status=TaskStatus.TODO, name='task one', index=0),
+            Task(status=TaskStatus.TODO, name='task two', index=1),
+            Task(status=TaskStatus.TODO, name='task three', index=2),
+        ]
 
         input_tasks = ['task one', 'task two', 'task three']
         for task in input_tasks:
@@ -59,36 +64,43 @@ class TaskTest(unittest.TestCase):
             add_task(task, self.file_name)
         make_it_done(1, self.file_name)
         tasks = list_task(self.file_name)
-        self.assertEqual(tasks[0].split(',')[1], 'todo')
-        self.assertEqual(tasks[1].split(',')[1], 'done')
+        self.assertEqual(tasks[0].status, TaskStatus.TODO)
+        self.assertEqual(tasks[1].status, TaskStatus.DONE)
 
     def test_save_task_write_mode(self):
         # mode: write
         expected_tasks = [
-            {'status': 'todo', 'name': 'task1'},
-            {'status': 'todo', 'name': 'task1'},
+            Task(status=TaskStatus.TODO, name='task1'),
+            Task(status=TaskStatus.TODO, name='task1')
         ]
         expected_result = [
-            f"{i},{task['status']},{task['name']}\n"
+            f"{i},{task.status},{task.name}\n"
             for i, task
             in enumerate(expected_tasks)
         ]
-        save_task(expected_tasks, 'w', self.file_name)
+        save_task(tasks=expected_tasks, file_name=self.file_name)
         with open(self.file_name, 'r') as f:
             self.assertEqual(f.readlines(), expected_result)
         
         # mode: append
         additional_tasks = [
-            {'status': 'todo', 'name': 'task1'},
-            {'status': 'todo', 'name': 'task1'},
+            Task(status=TaskStatus.TODO, name='task1'),
+            Task(status=TaskStatus.TODO, name='task1')
         ]
         additional_expected_result = [
-            f"{i},{task['status']},{task['name']}\n"
+            f"{i},{task.status},{task.name}\n"
             for i, task
             in enumerate(expected_tasks + additional_tasks)
         ]
-        save_task(additional_tasks, 'a', self.file_name)
+        save_task(tasks=additional_tasks, is_append=True, file_name=self.file_name)
         with open(self.file_name, 'r') as f:
             self.assertEqual(f.readlines(), additional_expected_result)
 
-    # def test_save_task_contains_comma(self):
+    @unittest.skip('until implement new list_task') 
+    def test_remove_task(self):
+        tasks = [
+            {'status': 'todo', 'name': 'task1'},
+            {'status': 'todo', 'name': 'task1'},
+        ]
+        save_task(tasks, file_name=self.file_name)
+        indexed_task = list_task
