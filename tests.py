@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from main import (add_task, list_task, get_last_index, make_it_done,
-                  save_task, Task, TaskStatus)
+from main import (add_task, list_task, get_last_index, make_it_done, remove_task,
+                  save_task, Task, TaskStatus, TaskManager)
 
 class TaskTest(unittest.TestCase):
     def setUp(self):
@@ -17,8 +17,8 @@ class TaskTest(unittest.TestCase):
         tasks = ['task1', 'task2']
         for task in tasks:
             add_task(task, self.file_name)
-        test_file = open(self.file_name, 'r')
-        self.assertEqual(expected_results, test_file.readlines())
+        with open(self.file_name, 'r') as test_file:
+            self.assertEqual(expected_results, test_file.readlines())
 
     def test_list_task(self):
         expected_tasks = [
@@ -78,29 +78,34 @@ class TaskTest(unittest.TestCase):
             for i, task
             in enumerate(expected_tasks)
         ]
-        save_task(tasks=expected_tasks, file_name=self.file_name)
+        TaskManager(self.file_name)._save(tasks=expected_tasks)
         with open(self.file_name, 'r') as f:
             self.assertEqual(f.readlines(), expected_result)
         
         # mode: append
         additional_tasks = [
             Task(status=TaskStatus.TODO, name='task1'),
-            Task(status=TaskStatus.TODO, name='task1')
+            Task(status=TaskStatus.TODO, name='task2')
         ]
         additional_expected_result = [
             f"{i},{task.status},{task.name}\n"
             for i, task
             in enumerate(expected_tasks + additional_tasks)
         ]
-        save_task(tasks=additional_tasks, is_append=True, file_name=self.file_name)
+        TaskManager(self.file_name)._save(tasks=additional_tasks, is_append=True)
+        # save_task(tasks=additional_tasks, is_append=True, file_name=self.file_name)
         with open(self.file_name, 'r') as f:
             self.assertEqual(f.readlines(), additional_expected_result)
 
-    @unittest.skip('until implement new list_task') 
+    # @unittest.skip('until implement new list_task') 
     def test_remove_task(self):
         tasks = [
-            {'status': 'todo', 'name': 'task1'},
-            {'status': 'todo', 'name': 'task1'},
+            Task(status=TaskStatus.TODO, name='task1'),
+            Task(status=TaskStatus.TODO, name='task2')
         ]
         save_task(tasks, file_name=self.file_name)
-        indexed_task = list_task
+        remove_task(0, file_name=self.file_name)
+        indexed_task = list_task(file_name=self.file_name)
+        self.assertEqual(len(indexed_task), 1)
+        self.assertEqual(indexed_task[0].name, 'task2')
+
