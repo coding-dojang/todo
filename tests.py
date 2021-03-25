@@ -1,8 +1,7 @@
 import os
 import unittest
 
-from main import (add_task, list_task, get_last_index, make_it_done, remove_task,
-                  save_task, Task, TaskStatus, TaskManager)
+from main import Task, TaskStatus, TaskManager
 
 class TaskTest(unittest.TestCase):
     def setUp(self):
@@ -15,8 +14,9 @@ class TaskTest(unittest.TestCase):
     def test_add_task(self):
         expected_results = ['0,todo,task1\n', '1,todo,task2\n']
         tasks = ['task1', 'task2']
+        tm = TaskManager(self.file_name)
         for task in tasks:
-            add_task(task, self.file_name)
+            tm.add(task)
         with open(self.file_name, 'r') as test_file:
             self.assertEqual(expected_results, test_file.readlines())
 
@@ -26,11 +26,12 @@ class TaskTest(unittest.TestCase):
             Task(status=TaskStatus.TODO, name='task two', index=1),
             Task(status=TaskStatus.TODO, name='task three', index=2),
         ]
+        tm = TaskManager(self.file_name)
 
         input_tasks = ['task one', 'task two', 'task three']
         for task in input_tasks:
-            add_task(task, self.file_name)
-        actual_tasks = list_task(self.file_name)
+            tm.add(task)
+        actual_tasks = tm.list()
         self.assertEqual(expected_tasks, actual_tasks)
 
     def test_get_last_index(self):
@@ -43,27 +44,31 @@ class TaskTest(unittest.TestCase):
         '''
         lines = ['0,task1\n', '1,task2\n', '3,task4\n']
         expected_result = 3
-        actual_result = get_last_index(lines)
+        tm = TaskManager(self.file_name)
+        actual_result = tm._get_last_index(lines)
         self.assertEqual(expected_result, actual_result)
 
     def test_get_last_index_with_comma_included_task(self):
         lines = ['0,task1\n', '1,"ta,sk2"\n']
         expected_result = 1
-        actual_result = get_last_index(lines)
+        tm = TaskManager(self.file_name)
+        actual_result = tm._get_last_index(lines)
         self.assertEqual(expected_result, actual_result)
 
     def test_get_last_index_with_empty_list(self):
         lines = []
         expected_result = 0
-        actual_result = get_last_index(lines)
+        tm = TaskManager(self.file_name)
+        actual_result = tm._get_last_index(lines)
         self.assertEqual(expected_result, actual_result)
          
     def test_make_it_done(self):
         input_tasks = ['task one', 'task two', 'task three']
+        tm = TaskManager(self.file_name)
         for task in input_tasks:
-            add_task(task, self.file_name)
-        make_it_done(1, self.file_name)
-        tasks = list_task(self.file_name)
+            tm.add(task)
+        tm.done(1)
+        tasks = tm.list()
         self.assertEqual(tasks[0].status, TaskStatus.TODO)
         self.assertEqual(tasks[1].status, TaskStatus.DONE)
 
@@ -103,9 +108,10 @@ class TaskTest(unittest.TestCase):
             Task(status=TaskStatus.TODO, name='task1'),
             Task(status=TaskStatus.TODO, name='task2')
         ]
-        save_task(tasks, file_name=self.file_name)
-        remove_task(0, file_name=self.file_name)
-        indexed_task = list_task(file_name=self.file_name)
+        tm = TaskManager(self.file_name)
+        tm._save(tasks)
+        tm.remove(0)
+        indexed_task = tm.list()
         self.assertEqual(len(indexed_task), 1)
         self.assertEqual(indexed_task[0].name, 'task2')
 
