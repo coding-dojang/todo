@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from main import Task, TaskStatus, TaskManager
+from main import Task, TaskStatus, TaskManager, EmptyTaskException
 
 class TaskTest(unittest.TestCase):
     def setUp(self):
@@ -17,6 +17,7 @@ class TaskTest(unittest.TestCase):
         tm = TaskManager(self.file_name)
         for task in tasks:
             tm.add(task)
+        tm.save()
         with open(self.file_name, 'r') as test_file:
             self.assertEqual(expected_results, test_file.readlines())
 
@@ -31,12 +32,13 @@ class TaskTest(unittest.TestCase):
         input_tasks = ['task one', 'task two', 'task three']
         for task in input_tasks:
             tm.add(task)
-        actual_tasks = tm.list()
+        tm.save()
+        actual_tasks = tm.load()
         self.assertEqual(expected_tasks, actual_tasks)
 
     def test_get_last_index(self):
         '''
-        input: list (readlines()) -> csv like string
+        input: load (readlines()) -> csv like string
         parse csv like format 
         sorting
         get last index
@@ -67,8 +69,9 @@ class TaskTest(unittest.TestCase):
         tm = TaskManager(self.file_name)
         for task in input_tasks:
             tm.add(task)
+        tm.save()
         tm.done(1)
-        tasks = tm.list()
+        tasks = tm.load()
         self.assertEqual(tasks[0].status, TaskStatus.TODO)
         self.assertEqual(tasks[1].status, TaskStatus.DONE)
 
@@ -102,16 +105,62 @@ class TaskTest(unittest.TestCase):
         with open(self.file_name, 'r') as f:
             self.assertEqual(f.readlines(), additional_expected_result)
 
-    # @unittest.skip('until implement new list_task') 
+    # @unittest.skip('until implement new list_task')
+    @unittest.skip('until rename list() to load()')
     def test_remove_task(self):
         tasks = [
             Task(status=TaskStatus.TODO, name='task1'),
             Task(status=TaskStatus.TODO, name='task2')
         ]
         tm = TaskManager(self.file_name)
-        tm._save(tasks)
+        # tm._save(tasks)
+        for task in tasks:
+            tm.add(task)
+        tm.save()
         tm.remove(0)
-        indexed_task = tm.list()
+        indexed_task = tm.load()
         self.assertEqual(len(indexed_task), 1)
         self.assertEqual(indexed_task[0].name, 'task2')
 
+    #@unittest.skip('until rename list() to load()')
+    def test_load_and_save_from_file(self):
+        tasks = ['task1', 'task2']
+        tm = TaskManager(self.file_name)
+        load_tm = TaskManager(self.file_name)
+        self.assertEqual(tm.tasks, load_tm.tasks)
+        # tm._save(tasks)
+        for task in tasks:
+            tm.add(task)
+        tm.save()
+        # check save file
+
+        load_tm.load()
+        self.assertEqual(tm.tasks, load_tm.tasks)
+
+        self.assertEqual(len(load_tm.tasks), 2)
+        self.assertEqual(load_tm.tasks[0].name, 'task1')
+        self.assertEqual(load_tm.tasks[1].name, 'task2')
+
+    def test_list_without_save_file(self):
+        tm = TaskManager(self.file_name)
+        tasks = tm.load()
+        self.assertEqual(tasks, [])
+    
+    def test_get_last_index_from_tasks(self):
+        tm = TaskManager(self.file_name)
+        LAST_INDEX_NUMBER = 10
+        tasks = [
+            Task(status=TaskStatus.TODO, name='task1', index=LAST_INDEX_NUMBER),
+            Task(status=TaskStatus.TODO, name='task2', index=5)
+        ]
+        tm.tasks = tasks
+        self.assertEqual(tm._get_last_index_from_task(), LAST_INDEX_NUMBER)
+
+    def test_get_last_index_from_tasks_without_initial_data(self):
+        '''
+        get_last_index_from_tasks should raise EmptyTaskException when meet empty tasks list
+        '''
+        tm = TaskManager(self.file_name)
+        self.assertRaises(EmptyTaskException, tm._get_last_index_from_task)
+        tm.add('zero task')
+        self.assertEqual(tm._get_last_index_from_task(), 0)

@@ -18,6 +18,7 @@ TODO:
 [ ] make TaskManager use state more
 [ ] modify task
 [ ] undone task
+
 '''
 # data example
 # 0,todo,"Go to zoo"
@@ -44,41 +45,54 @@ class Task:
     index: int = None
 
 
+class EmptyTaskException(Exception):
+    pass
 class TaskManager:
     def __init__(self, file_name: str):
         self.file_name = file_name
+        self.tasks = self.load()
 
     # add
-    def add(self, task: str):
-        self._save([Task(status=TaskStatus.TODO, name=task)], True)
-
+    def add(self, task_name: str):
+        try:
+            last_index = self._get_last_index_from_task()
+            next_index = last_index + 1
+        except EmptyTaskException:
+            next_index = 0
+        self.tasks += [Task(status=TaskStatus.TODO, name=task_name, index=next_index)]
+        
     # remove
     def remove(self, index: int):
         # list_task
-        tasks = self.list()
+        # tasks = self.list()
+
         # remove from index
         new_tasks = (
-            task for task in tasks
+            task for task in self.tasks
             if not task.index == index
         )
         # save_task
+        self.tasks = new_tasks
         self._save(new_tasks)
 
     # done
     def done(self, index: int):
-        tasks = self.list()
+        tasks = self.load()
         tasks[index].status = TaskStatus.DONE
         # save_task(tasks, file_name=file_name)
         self._save(tasks)
     
-    # list
-    def list(self):
+    # load
+    def load(self):
+        if not os.path.exists(self.file_name):
+            return []
         with open(self.file_name) as save_file:
             lines = [line.strip() for line in save_file]
             tasks = []
             for line in lines:
                 fields = line.split(',')
                 tasks.append(Task(status=TaskStatus(fields[1]), name=fields[2], index=int(fields[0])))
+            self.tasks = tasks
         return tasks
 
     # _save
@@ -113,6 +127,14 @@ class TaskManager:
                 save_file.write(f"{next_index},{task.status},{task.name}\n")
                 save_file.close()
 
+    def save(self):
+        self._save(self.tasks)
+
+    def _get_last_index_from_task(self):
+        if self.tasks == []:
+            raise EmptyTaskException('empty list')
+        return max([task.index for task in self.tasks])
+
     def _get_last_index(self, lines: list) -> int:
         # assume that index is sorted ascendingly
         if not lines:
@@ -124,4 +146,4 @@ if __name__ == '__main__':
     tm = TaskManager(SAVE_FILE)
     tm.add('hi')
     tm.add('hello')
-    print(tm.list())
+    print(tm.load())
